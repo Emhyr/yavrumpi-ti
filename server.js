@@ -117,7 +117,7 @@ wss.on("connection",(ws)=>{
       const wanted=m.role==="guest"?"guest":"host";
       if(players[wanted] && players[wanted].readyState===WebSocket.OPEN){ws.send(JSON.stringify({type:"error",message:"Bu taraf zaten bağlı."}));return}
       role=wanted;players[role]=ws;
-      if(!game)game=freshGame();
+      if(!game || game.done || (game.hands[0].length===0 && game.hands[1].length===0 && game.deck.length===0)) game=freshGame();
       ws.send(JSON.stringify({type:"joined",role,room:ROOM}));
       sendAll();
     }
