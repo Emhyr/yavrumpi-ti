@@ -69,21 +69,39 @@ function play(player,id){
   const i=game.hands[player].findIndex(c=>c.id===id); if(i<0)return;
   const c=game.hands[player].splice(i,1)[0], top=game.pile.at(-1);
   game.pile.push(c);
-  let take=false,pisti=false;
-  if(c.rank==="J")take=true;
-  else if(top&&c.rank===top.rank){take=true;pisti=game.pile.length===2}
+  let take=false,pisti=false,pistiPoints=0;
+  if(c.rank==="J") {
+    take=true;
+    if(top&&top.rank==="J"&&game.pile.length===2){pisti=true;pistiPoints=20;}
+  } else if(top&&c.rank===top.rank){
+    take=true;
+    pisti=game.pile.length===2;
+    pistiPoints=10;
+  }
+  let event={type:"play",player,card:c,points:0,kind:"play"};
   if(take){
     game.captured[player].push(...game.pile.splice(0));game.lastCapture=player;
-    if(pisti)game.scores[player]+=10;
+    if(pisti){game.scores[player]+=pistiPoints;event.points=pistiPoints;event.kind="pisti";}
+    else event.kind="capture";
   }
   game.turn=1-player;
   if(!game.hands[0].length&&!game.hands[1].length&&!game.deck.length)finishIfNeeded();
   else if(!game.hands[0].length&&!game.hands[1].length){
     for(let i=0;i<4&&game.deck.length;i++){game.hands[0].push(game.deck.pop());game.hands[1].push(game.deck.pop())}
     game.turn=game.lastCapture>=0?game.lastCapture:game.turn;
+    sendAll();
+    sendEvent(event);
+    sendEvent({type:"deal"});
+    return;
   }
   sendAll();
+  sendEvent(event);
 }
+function sendEvent(event){
+  const packet=JSON.stringify({type:"event",event});
+  for(const ws of [players.host,players.guest]) if(ws&&ws.readyState===WebSocket.OPEN) ws.send(packet);
+}
+
 wss.on("connection",(ws)=>{
   let role=null;
   ws.on("message",(raw)=>{
