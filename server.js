@@ -7,6 +7,7 @@ const PORT = process.env.PORT || 3000;
 const ROOM = "280425";
 const server = http.createServer((req,res)=>{
   let file = req.url === "/" ? "/index.html" : req.url;
+  if(req.url === "/health"){res.writeHead(200,{"Content-Type":"text/plain"});return res.end("ok");}
   const full = path.join(__dirname, "public", path.normalize(file).replace(/^(\.\.[\/\\])+/, ""));
   fs.readFile(full,(err,data)=>{
     if(err){res.writeHead(404);return res.end("Not found");}
@@ -17,6 +18,12 @@ const server = http.createServer((req,res)=>{
 });
 
 const wss = new WebSocket.Server({server});
+wss.on("error", err => console.error("WebSocket server error:", err.message));
+setInterval(() => {
+  for (const ws of [players.host, players.guest]) {
+    if (ws && ws.readyState === WebSocket.OPEN) ws.ping();
+  }
+}, 25000);
 let players = {host:null, guest:null};
 let game = null;
 
