@@ -59,14 +59,15 @@ function sendAll(){
   if(players.host && players.host.readyState===WebSocket.OPEN) players.host.send(packet("host"));
   if(players.guest && players.guest.readyState===WebSocket.OPEN) players.guest.send(packet("guest"));
 }
+function cardPoints(c){
+  if(c.rank==="A"||c.rank==="J")return 1;
+  if(c.rank==="2"&&c.suit==="♣")return 2;
+  if(c.rank==="10"&&c.suit==="♦")return 3;
+  return 0;
+}
 function finishIfNeeded(){
   if(game.hands[0].length||game.hands[1].length||game.deck.length)return false;
   if(game.lastCapture>=0) game.captured[game.lastCapture].push(...game.pile.splice(0));
-  for(let p=0;p<2;p++)for(const c of game.captured[p]){
-    if(c.rank==="A"||c.rank==="J")game.scores[p]++;
-    if(c.rank==="2"&&c.suit==="♣")game.scores[p]+=2;
-    if(c.rank==="10"&&c.suit==="♦")game.scores[p]+=3;
-  }
   if(game.captured[0].length>game.captured[1].length)game.scores[0]+=3;
   else if(game.captured[1].length>game.captured[0].length)game.scores[1]+=3;
   game.done=true; return true;
@@ -88,7 +89,11 @@ function play(player,id){
   let event={type:"play",player,card:c,points:0,kind:"play"};
   if(take){
     game.captured[player].push(...game.pile.splice(0));game.lastCapture=player;
-    if(pisti){game.scores[player]+=pistiPoints;event.points=pistiPoints;event.kind="pisti";}
+    const captured=game.pile.slice();
+    const bonus=captured.reduce((sum,card)=>sum+cardPoints(card),0);
+    game.scores[player]+=bonus;
+    event.points=bonus;
+    if(pisti){game.scores[player]+=pistiPoints;event.points+=pistiPoints;event.kind="pisti";}
     else event.kind="capture";
   }
   game.turn=1-player;
@@ -127,3 +132,5 @@ wss.on("connection",(ws)=>{
   ws.on("close",()=>{if(role&&players[role]===ws)players[role]=null;sendAll()});
 });
 server.listen(PORT, "0.0.0.0", ()=>console.log(`Pisti online: port ${PORT} | Oda: ${ROOM}`));
+
+{"name":"yavruma-ozel-pisti","version":"1.0.0","private":true,"scripts":{"start":"node server.js"},"dependencies":{"ws":"^8.18.0"}}
