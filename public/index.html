@@ -40,18 +40,29 @@ h1{text-align:center;color:#ebcb8c;letter-spacing:5px}.lobby p{text-align:center
 .flying-card{position:absolute;left:50%;top:50%;z-index:40;width:84px;height:120px;border-radius:10px;background:linear-gradient(145deg,#fff9eb,#e8ddc7);border:1px solid #bba98b;color:#151014;box-shadow:0 10px 28px #000b;display:flex;align-items:center;justify-content:center;font-weight:bold;pointer-events:none}
 .flying-card .c{position:absolute;top:7px;left:9px;font-size:17px}.flying-card .s{font-size:47px}.flying-card.red{color:#ae2944}.flying-me{animation:flyFromMe .58s cubic-bezier(.2,.75,.25,1) forwards}.flying-opp{animation:flyFromOpp .58s cubic-bezier(.2,.75,.25,1) forwards}
 .table.flash{animation:tableFlash .7s ease}.deck-shuffle{animation:shufflePulse .55s ease}.deal-fly{animation:dealFly .4s ease both}
+
+.winner-overlay,.reveal-overlay{position:absolute;inset:0;z-index:100;display:none;place-items:center;background:#10040acc;backdrop-filter:blur(4px)}
+.winner-box{min-width:min(430px,90%);padding:32px;text-align:center;border:1px solid #d0aa62;border-radius:22px;background:linear-gradient(145deg,#3a101f,#17070d);box-shadow:0 20px 80px #000;animation:winnerIn .55s ease both}
+.winner-box h2{margin:0 0 8px;color:#f3d18c;font-size:42px;letter-spacing:3px}.winner-box p{margin:8px 0 22px;color:#dbc5ae;font-size:17px}.winner-score{font-size:25px;color:#fff0bf;margin-bottom:20px}
+@keyframes winnerIn{from{opacity:0;transform:scale(.75) translateY(20px)}to{opacity:1;transform:scale(1) translateY(0)}}
+.reveal-box{width:min(760px,92%);padding:24px;text-align:center;border:1px solid #d0aa62;border-radius:22px;background:#17070deF;box-shadow:0 20px 80px #000;animation:winnerIn .35s ease both}.reveal-box h3{margin:0;color:#f3d18c;font-size:25px}.reveal-box p{margin:8px 0 18px;color:#d5bda7}.revealed-cards{display:flex;justify-content:center;flex-wrap:wrap;gap:9px}.revealed-cards .card{width:72px;height:103px}.reveal-count{margin-top:15px;color:#ffe4a2;font-weight:bold}.pause-status{opacity:.9}
 </style></head><body>
 <section id="lobby"><div class="lobby"><h1>YAVRUMA ÖZEL ♡</h1><p>Senin için hazırladığım küçük bir oyun</p>
 <div class="roles"><button id="host" class="active" onclick="pick('host')">Yakışıklım</button><button id="guest" onclick="pick('guest')">Yavrum</button></div>
 <button onclick="enter()">Masaya Gir</button></div></section>
 <section id="game"><div class="top"><div class="box"><div class="name" id="opp">Yavrum ♡</div><div class="small">Puan: <b id="os">0</b></div></div>
 <div class="title"><h1>PİŞTİ ♡</h1><div id="turn">BAĞLANIYOR</div></div><div class="box" style="text-align:right"><div class="small">DESTEDE KALAN</div><div id="dc" style="font-size:27px;color:#e8c983">24</div></div></div>
-<div class="table"><div class="opponent"><div id="opcards" class="opcards"></div></div><div class="center"><div class="back"></div><div id="discard" class="discard">YERE ATILAN<br>KARTLAR</div></div><div id="status" class="status">Bağlanıyor...</div><div id="hand" class="hand"></div></div>
+<div class="table"><div class="opponent"><div id="opcards" class="opcards"></div></div><div class="center"><div class="back"></div><div id="discard" class="discard">YERE ATILAN<br>KARTLAR</div></div><div id="status" class="status">Bağlanıyor...</div><div id="hand" class="hand"></div>
+<div id="revealOverlay" class="reveal-overlay"><div class="reveal-box"><h3 id="revealTitle">Kartlar</h3><p>Bu kartlar 5 saniye boyunca sende görünüyor.</p><div id="revealedCards" class="revealed-cards"></div><div id="revealCount" class="reveal-count">5</div></div></div>
+<div id="winnerOverlay" class="winner-overlay"><div class="winner-box"><h2 id="winnerTitle">Kazandı!</h2><p id="winnerText">Oyun bitti.</p><div id="winnerScore" class="winner-score"></div><button id="restartBtn" onclick="restartGame()">Tekrar Oyna</button></div></div>
+</div>
 <div class="bottom"><span id="me">Yakışıklım ♡</span><span>Benim puanım: <b id="myScore">0</b> &nbsp;·&nbsp; Yavruma özel ♡</span></div></section>
 <script>
 let role="host",ws,state=null;
 const lobbyEl=document.getElementById("lobby"), gameEl=document.getElementById("game"), hostEl=document.getElementById("host"), guestEl=document.getElementById("guest"), meEl=document.getElementById("me"), oppEl=document.getElementById("opp"), statusEl=document.getElementById("status");
 const handEl=document.getElementById("hand"), opcardsEl=document.getElementById("opcards"), discardEl=document.getElementById("discard"), turnEl=document.getElementById("turn"), deckCountEl=document.getElementById("dc"), myScoreEl=document.getElementById("myScore"), oppScoreEl=document.getElementById("os");
+const revealOverlay=document.getElementById("revealOverlay"), revealedCardsEl=document.getElementById("revealedCards"), revealTitle=document.getElementById("revealTitle"), revealCount=document.getElementById("revealCount");
+const winnerOverlay=document.getElementById("winnerOverlay"), winnerTitle=document.getElementById("winnerTitle"), winnerText=document.getElementById("winnerText"), winnerScore=document.getElementById("winnerScore");
 function pick(r){role=r;hostEl.classList.toggle("active",r==="host");guestEl.classList.toggle("active",r==="guest")}
 function enter(){
  lobbyEl.style.display="none";gameEl.style.display="block";meEl.textContent=(role==="host"?"Yakışıklım":"Yavrum")+" ♡";oppEl.textContent=(role==="host"?"Yavrum":"Yakışıklım")+" ♡";
@@ -101,17 +112,48 @@ function flyCard(c,player){
 function flashTable(){
   const t=document.querySelector(".table");t.classList.remove("flash");void t.offsetWidth;t.classList.add("flash");
 }
+function showReveal(ev){
+  if(!state)return;
+  const meI=role==="host"?0:1;
+  // Yalnızca kartları alan oyuncu 5 saniye görür.
+  if(ev.player!==meI)return;
+  revealedCardsEl.innerHTML="";
+  (ev.cards||[]).forEach(c=>revealedCardsEl.appendChild(card(c,false)));
+  revealTitle.textContent=ev.kind==="pisti"?"PİŞTİ! Kartların ♡":"Yakaladığın Kartlar";
+  revealOverlay.style.display="grid";
+  let left=5; revealCount.textContent=left;
+  clearInterval(window.revealTimer);
+  window.revealTimer=setInterval(()=>{left--;revealCount.textContent=Math.max(0,left);if(left<=0){clearInterval(window.revealTimer);revealOverlay.style.display="none";}},1000);
+}
+function showWinner(ev){
+  revealOverlay.style.display="none"; clearInterval(window.revealTimer);
+  winnerTitle.textContent=ev.winnerName+" KAZANDI! ♡";
+  const meI=role==="host"?0:1;
+  winnerText.textContent=ev.winner===meI?"Tebrikler! Oyunu sen kazandın.":"Bu turu rakibin kazandı.";
+  winnerScore.textContent="Skor: "+ev.scores[0]+" - "+ev.scores[1];
+  winnerOverlay.style.display="grid";
+}
+function restartGame(){
+  if(ws&&ws.readyState===1){winnerOverlay.style.display="none";ws.send(JSON.stringify({type:"reset"}));}
+}
 function handleEvent(ev){
   if(!ev)return;
   if(ev.type==="play"){
     if(ev.card)flyCard(ev.card,ev.player);
     if(ev.kind==="capture")flashTable();
-    if(ev.points>0){showPoint(ev.points,"");}
+    if(ev.points>0)showPoint(ev.points,"");
     if(ev.kind==="pisti")showPisti(ev.points);
   }
-  if(ev.type==="finish" && ev.bonus>0){showPoint(ev.bonus,"Çok kart");}
+  if(ev.type==="revealCapture")showReveal(ev);
+  if(ev.type==="roundBonus")showPoint(ev.points,"Çok kart");
+  if(ev.type==="finish")showWinner(ev);
   if(ev.type==="deal"){
     const b=document.querySelector(".back");if(b){b.classList.remove("deck-shuffle");void b.offsetWidth;b.classList.add("deck-shuffle");}
+  }
+  if(ev.type==="restart"){
+    winnerOverlay.style.display="none";
+    revealOverlay.style.display="none";
+    clearInterval(window.revealTimer);
   }
 }
 let lastScores=[0,0],lastDeckCount=null,lastHandSignature="";
@@ -136,8 +178,20 @@ function render(){
   handEl.innerHTML="";
   state.myHand.forEach((c,i)=>{let el=card(c,state.turn===meI);el.classList.add("new-card");el.style.animationDelay=(i*45)+"ms";handEl.appendChild(el)});
   discardEl.innerHTML="";
-  if(state.pile.length)discardEl.appendChild(card(state.pile[state.pile.length-1],false));
-  else discardEl.textContent="YERE ATILAN KARTLAR";
+  if(state.pile.length){
+    const stack=document.createElement("div");
+    stack.style.position="relative"; stack.style.width="84px"; stack.style.height="120px";
+    // Masadaki ilk dört kartın üçü kapalı, en üstteki açık.
+    const hiddenCount=Math.min(3,Math.max(0,state.pile.length-1));
+    for(let i=0;i<hiddenCount;i++){
+      const b=document.createElement("div"); b.className="back";
+      b.style.position="absolute"; b.style.left=(i*4)+"px"; b.style.top=(i*2)+"px"; b.style.marginLeft="0"; b.style.transform="rotate("+((i-1)*2)+"deg) scale(.92)"; b.style.zIndex=i;
+      stack.appendChild(b);
+    }
+    const topCard=card(state.pile[state.pile.length-1],false);
+    topCard.style.position="absolute"; topCard.style.left="0"; topCard.style.top="0"; topCard.style.zIndex="5";
+    stack.appendChild(topCard); discardEl.appendChild(stack);
+  } else discardEl.textContent="YERE ATILAN KARTLAR";
   lastScores=[...state.scores];
 }
 </script></body></html>
