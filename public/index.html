@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="tr"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Yavruma Özel ♡</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 20%,#501628,#17080e 65%,#080406);color:#f7ead4;font-family:Georgia,serif}
+button{cursor:pointer;border:1px solid #a07842;border-radius:11px;padding:13px 18px;background:linear-gradient(#662039,#2d0d19);color:#fff;font:inherit;font-weight:bold}.active{outline:2px solid #dfbf78}
+#lobby{min-height:100vh;display:grid;place-items:center;padding:20px}.lobby{width:min(460px,100%);padding:35px;background:#180a0eee;border:1px solid #79572f;border-radius:22px;box-shadow:0 25px 80px #000}
+h1{text-align:center;color:#ebcb8c;letter-spacing:5px}.lobby p{text-align:center;color:#c8b4a1}.roles{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:20px 0}.lobby button{width:100%}
+#game{display:none;padding:12px;min-height:100vh}.top{max-width:1400px;margin:auto;display:grid;grid-template-columns:260px 1fr 260px;gap:15px;align-items:center}.box{background:#18090dcc;border:1px solid #76532f;border-radius:14px;padding:11px}.name{font-size:20px;color:#efd39a}.small{color:#bda998;font-size:13px}.title{text-align:center}.title h1{margin:0}.title div{font-size:12px;color:#aa9584;letter-spacing:3px}
+.table{position:relative;max-width:1400px;width:100%;height:calc(100vh - 145px);min-height:590px;margin:10px auto;border:8px solid #3c291b;border-radius:45%/14%;background:radial-gradient(ellipse,#621c31,#431222 55%,#2b0b15);box-shadow:inset 0 0 0 2px #9a6d3a,inset 0 0 70px #15060a;overflow:hidden}.table:before{content:"♡";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:180px;color:#e68da0;opacity:.05}
+.opponent{position:absolute;top:20px;left:50%;transform:translateX(-50%)}.opcards{display:flex;height:78px}.back{width:72px;height:104px;margin-left:-22px;border:4px solid #f1dfbd;border-radius:9px;background:repeating-linear-gradient(45deg,#741d38 0 7px,#e1c087 7px 9px,#741d38 9px 16px);position:relative;box-shadow:0 5px 12px #0008}.back:after{content:"♡";position:absolute;inset:11px;border:1px solid #e1c087;display:grid;place-items:center;color:#e1c087;font-size:27px}
+.center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:35px}.card{width:84px;height:120px;border-radius:10px;background:linear-gradient(145deg,#fff9eb,#e8ddc7);border:1px solid #bba98b;color:#151014;box-shadow:0 8px 16px #0009;position:relative;display:flex;align-items:center;justify-content:center;font-weight:bold}.card .c{position:absolute;top:7px;left:9px;font-size:17px}.card .s{font-size:47px}.red{color:#ae2944}.discard{width:84px;height:120px;border:1px dashed #b78275;border-radius:10px;display:grid;place-items:center;color:#b99b91;font-size:10px;text-align:center}
+.hand{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);height:145px;display:flex;align-items:flex-end}.hand .card{margin-left:-25px;cursor:pointer;transition:.18s}.hand .card:first-child{margin-left:0}.hand .card:hover{transform:translateY(-22px);margin-left:-14px}
+.status{position:absolute;bottom:160px;left:50%;transform:translateX(-50%);background:#16080ddd;border:1px solid #76512e;border-radius:20px;padding:9px 18px;white-space:nowrap}.bottom{max-width:1400px;margin:auto;color:#a99686;font-size:13px;display:flex;justify-content:space-between}
+@media(max-width:800px){.top{grid-template-columns:1fr 1fr}.title{grid-column:1/-1;grid-row:1}.table{height:610px}.center{gap:12px}.hand{transform:translateX(-50%) scale(.82);transform-origin:bottom}.status{bottom:150px}}
+</style></head><body>
+<section id="lobby"><div class="lobby"><h1>YAVRUMA ÖZEL ♡</h1><p>Senin için hazırladığım küçük bir oyun</p>
+<div class="roles"><button id="host" class="active" onclick="pick('host')">Yakışıklım</button><button id="guest" onclick="pick('guest')">Yavrum</button></div>
+<button onclick="enter()">Masaya Gir</button></div></section>
+<section id="game"><div class="top"><div class="box"><div class="name" id="opp">Yavrum ♡</div><div class="small">Puan: <b id="os">0</b></div></div>
+<div class="title"><h1>PİŞTİ ♡</h1><div id="turn">BAĞLANIYOR</div></div><div class="box" style="text-align:right"><div class="small">DESTEDE KALAN</div><div id="dc" style="font-size:27px;color:#e8c983">24</div></div></div>
+<div class="table"><div class="opponent"><div id="opcards" class="opcards"></div></div><div class="center"><div class="back"></div><div id="discard" class="discard">YERE ATILAN<br>KARTLAR</div></div><div id="status" class="status">Bağlanıyor...</div><div id="hand" class="hand"></div></div>
+<div class="bottom"><span id="me">Yakışıklım ♡</span><span>Yavruma özel ♡</span></div></section>
+<script>
+let role="host",ws,state=null;
+function pick(r){role=r;host.classList.toggle("active",r==="host");guest.classList.toggle("active",r==="guest")}
+function enter(){
+ lobby.style.display="none";game.style.display="block";me.textContent=(role==="host"?"Yakışıklım":"Yavrum")+" ♡";opp.textContent=(role==="host"?"Yavrum":"Yakışıklım")+" ♡";
+ const proto=location.protocol==="https:"?"wss":"ws";ws=new WebSocket(proto+"://"+location.host);
+ ws.onopen=()=>ws.send(JSON.stringify({type:"join",role}));
+ ws.onmessage=e=>{let m=JSON.parse(e.data);if(m.type==="state"){state=m.state;render()}else if(m.type==="error"){status.textContent=m.message}};
+ ws.onclose=()=>status.textContent="Bağlantı kesildi";
+}
+function card(c,click){let d=document.createElement("div");d.className="card "+((c.suit==="♥"||c.suit==="♦")?"red":"");d.innerHTML='<span class="c">'+c.rank+c.suit+'</span><span class="s">'+c.suit+'</span>';if(click)d.onclick=()=>ws.send(JSON.stringify({type:"play",id:c.id}));return d}
+function render(){
+ let meI=role==="host"?0:1,opI=1-meI;os.textContent=state.scores[opI];dc.textContent=state.deckCount;turn.textContent=state.turn===meI?"SIRA SENDE ♡":"DİĞER OYUNCUNUN SIRASI";
+ opcards.innerHTML="";for(let i=0;i<state.opponentCardCount;i++){let b=document.createElement("div");b.className="back";opcards.appendChild(b)}
+ hand.innerHTML="";state.myHand.forEach(c=>hand.appendChild(card(c,state.turn===meI)));
+ discard.innerHTML="";if(state.pile.length)discard.appendChild(card(state.pile[state.pile.length-1],false));else discard.textContent="YERE ATILAN KARTLAR";
+ status.textContent=state.turn===meI?"Kartını seç ♡":"Rakibinin sırası";
+}
+</script></body></html>
