@@ -132,5 +132,3 @@ wss.on("connection",(ws)=>{
   ws.on("close",()=>{if(role&&players[role]===ws)players[role]=null;sendAll()});
 });
 server.listen(PORT, "0.0.0.0", ()=>console.log(`Pisti online: port ${PORT} | Oda: ${ROOM}`));
-
-{"name":"yavruma-ozel-pisti","version":"1.0.0","private":true,"scripts":{"start":"node server.js"},"dependencies":{"ws":"^8.18.0"}}
