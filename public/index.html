@@ -128,7 +128,7 @@ function render(){
   deckCountEl.textContent=state.deckCount;
   turnEl.textContent=state.turn===meI?"SIRA SENDE ♡":"DİĞER OYUNCUNUN SIRASI";
   statusEl.textContent=state.turn===meI?"Kartını seç ♡":"Rakibinin sırası";
-  status.classList.toggle("turn-active",state.turn===meI);
+  statusEl.classList.toggle("turn-active",state.turn===meI);
   opcardsEl.innerHTML="";
   for(let i=0;i<state.opponentCardCount;i++){
     let b=document.createElement("div");b.className="back new-card";b.style.animationDelay=(i*35)+"ms";opcardsEl.appendChild(b);
