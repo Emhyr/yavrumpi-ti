@@ -10,7 +10,7 @@ h1{text-align:center;color:#ebcb8c;letter-spacing:5px}.lobby p{text-align:center
 .table{position:relative;max-width:1400px;width:100%;height:calc(100vh - 145px);min-height:590px;margin:10px auto;border:8px solid #3c291b;border-radius:45%/14%;background:radial-gradient(ellipse,#621c31,#431222 55%,#2b0b15);box-shadow:inset 0 0 0 2px #9a6d3a,inset 0 0 70px #15060a;overflow:hidden}.table:before{content:"♡";position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:180px;color:#e68da0;opacity:.05}
 .opponent{position:absolute;top:20px;left:50%;transform:translateX(-50%)}.opcards{display:flex;height:78px}.back{width:72px;height:104px;margin-left:-22px;border:4px solid #f1dfbd;border-radius:9px;background:repeating-linear-gradient(45deg,#741d38 0 7px,#e1c087 7px 9px,#741d38 9px 16px);position:relative;box-shadow:0 5px 12px #0008}.back:after{content:"♡";position:absolute;inset:11px;border:1px solid #e1c087;display:grid;place-items:center;color:#e1c087;font-size:27px}
 .center{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:35px}.card{width:84px;height:120px;border-radius:10px;background:linear-gradient(145deg,#fff9eb,#e8ddc7);border:1px solid #bba98b;color:#151014;box-shadow:0 8px 16px #0009;position:relative;display:flex;align-items:center;justify-content:center;font-weight:bold}.card .c{position:absolute;top:7px;left:9px;font-size:17px}.card .s{font-size:47px}.red{color:#ae2944}.discard{width:84px;height:120px;border:1px dashed #b78275;border-radius:10px;display:grid;place-items:center;color:#b99b91;font-size:10px;text-align:center}
-.hand{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);height:145px;display:flex;align-items:flex-end}.hand .card{margin-left:-25px;cursor:pointer;transition:.18s}.hand .card:first-child{margin-left:0}.hand .card:hover{transform:translateY(-22px);margin-left:-14px}
+.hand{position:absolute;z-index:10;bottom:20px;left:50%;transform:translateX(-50%);height:145px;display:flex;align-items:flex-end}.hand .card{margin-left:-25px;cursor:pointer;transition:.18s}.hand .card:first-child{margin-left:0}.hand .card:hover{transform:translateY(-22px);margin-left:-14px}
 .status{position:absolute;bottom:160px;left:50%;transform:translateX(-50%);background:#16080ddd;border:1px solid #76512e;border-radius:20px;padding:9px 18px;white-space:nowrap}.bottom{max-width:1400px;margin:auto;color:#a99686;font-size:13px;display:flex;justify-content:space-between}
 @media(max-width:800px){.top{grid-template-columns:1fr 1fr}.title{grid-column:1/-1;grid-row:1}.table{height:610px}.center{gap:12px}.hand{transform:translateX(-50%) scale(.82);transform-origin:bottom}.status{bottom:150px}}
 
@@ -51,6 +51,7 @@ h1{text-align:center;color:#ebcb8c;letter-spacing:5px}.lobby p{text-align:center
 <script>
 let role="host",ws,state=null;
 const lobbyEl=document.getElementById("lobby"), gameEl=document.getElementById("game"), hostEl=document.getElementById("host"), guestEl=document.getElementById("guest"), meEl=document.getElementById("me"), oppEl=document.getElementById("opp"), statusEl=document.getElementById("status");
+const handEl=document.getElementById("hand"), opcardsEl=document.getElementById("opcards"), discardEl=document.getElementById("discard"), turnEl=document.getElementById("turn"), deckCountEl=document.getElementById("dc"), myScoreEl=document.getElementById("myScore"), oppScoreEl=document.getElementById("os");
 function pick(r){role=r;hostEl.classList.toggle("active",r==="host");guestEl.classList.toggle("active",r==="guest")}
 function enter(){
  lobbyEl.style.display="none";gameEl.style.display="block";meEl.textContent=(role==="host"?"Yakışıklım":"Yavrum")+" ♡";oppEl.textContent=(role==="host"?"Yavrum":"Yakışıklım")+" ♡";
@@ -116,26 +117,27 @@ function handleEvent(ev){
 let lastScores=[0,0],lastDeckCount=null,lastHandSignature="";
 function render(){
   let meI=role==="host"?0:1,opI=1-meI;
-  const oldOpp=Number(os.textContent||0), oldMe=Number(document.getElementById("myScore").textContent||0);
-  os.textContent=state.scores[opI];
-  document.getElementById("myScore").textContent=state.scores[meI];
+  if(!state || !Array.isArray(state.myHand)) return;
+  const oldOpp=Number(oppScoreEl.textContent||0), oldMe=Number(myScoreEl.textContent||0);
+  oppScoreEl.textContent=state.scores[opI];
+  myScoreEl.textContent=state.scores[meI];
   if(state.scores[opI]!==oldOpp)animateScore(opI);
   if(state.scores[meI]!==oldMe)animateScore(meI);
-  if(lastDeckCount!==null && state.deckCount!==lastDeckCount){dc.classList.remove("deck-pop");void dc.offsetWidth;dc.classList.add("deck-pop");}
+  if(lastDeckCount!==null && state.deckCount!==lastDeckCount){deckCountEl.classList.remove("deck-pop");void deckCountEl.offsetWidth;deckCountEl.classList.add("deck-pop");}
   lastDeckCount=state.deckCount;
-  dc.textContent=state.deckCount;
-  turn.textContent=state.turn===meI?"SIRA SENDE ♡":"DİĞER OYUNCUNUN SIRASI";
+  deckCountEl.textContent=state.deckCount;
+  turnEl.textContent=state.turn===meI?"SIRA SENDE ♡":"DİĞER OYUNCUNUN SIRASI";
   statusEl.textContent=state.turn===meI?"Kartını seç ♡":"Rakibinin sırası";
   status.classList.toggle("turn-active",state.turn===meI);
-  opcards.innerHTML="";
+  opcardsEl.innerHTML="";
   for(let i=0;i<state.opponentCardCount;i++){
-    let b=document.createElement("div");b.className="back new-card";b.style.animationDelay=(i*35)+"ms";opcards.appendChild(b);
+    let b=document.createElement("div");b.className="back new-card";b.style.animationDelay=(i*35)+"ms";opcardsEl.appendChild(b);
   }
-  hand.innerHTML="";
-  state.myHand.forEach((c,i)=>{let el=card(c,state.turn===meI);el.classList.add("new-card");el.style.animationDelay=(i*45)+"ms";hand.appendChild(el)});
-  discard.innerHTML="";
-  if(state.pile.length)discard.appendChild(card(state.pile[state.pile.length-1],false));
-  else discard.textContent="YERE ATILAN KARTLAR";
+  handEl.innerHTML="";
+  state.myHand.forEach((c,i)=>{let el=card(c,state.turn===meI);el.classList.add("new-card");el.style.animationDelay=(i*45)+"ms";handEl.appendChild(el)});
+  discardEl.innerHTML="";
+  if(state.pile.length)discardEl.appendChild(card(state.pile[state.pile.length-1],false));
+  else discardEl.textContent="YERE ATILAN KARTLAR";
   lastScores=[...state.scores];
 }
 </script></body></html>
